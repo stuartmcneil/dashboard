@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<title>Stux Dashboard</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%231a1a19'/><rect x='14' y='14' width='32' height='32' rx='6' fill='%233987e5'/><rect x='54' y='14' width='32' height='32' rx='6' fill='%23d95926'/><rect x='14' y='54' width='32' height='32' rx='6' fill='%23199e70'/><rect x='54' y='54' width='32' height='32' rx='6' fill='%23c98500'/></svg>">
+<style>
+  :root{
+    color-scheme:dark;
+    --page:#0d0d0d; --surface:#1a1a19; --surface-2:#222221; --border:rgba(255,255,255,.10);
+    --ink:#ffffff; --ink-2:#c3c2b7; --muted:#898781; --grid:#2c2c2a; --axis:#383835;
+    --s1:#3987e5; --s2:#d95926; --s3:#199e70; --s4:#c98500; --s5:#d55181; --s6:#008300; --s7:#9085e9; --s8:#e66767;
+    --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --critical:#d03b3b;
+    --r:14px; --gap:14px;
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--page);color:var(--ink)}
+  body{padding:max(14px,env(safe-area-inset-top)) 14px 40px;font-size:15px;line-height:1.4;-webkit-font-smoothing:antialiased}
+  a{color:var(--ink-2)} a:hover{color:var(--ink)}
+  header{display:flex;align-items:center;justify-content:space-between;gap:12px;max-width:1400px;margin:0 auto 14px;padding:4px 2px}
+  header h1{font-size:1.15rem;margin:0;font-weight:700;letter-spacing:.2px}
+  header .date{color:var(--ink-2);font-size:.9rem}
+  header .right{display:flex;gap:8px;align-items:center}
+  .btn{background:var(--surface-2);border:1px solid var(--border);color:var(--ink);border-radius:9px;padding:7px 11px;font:inherit;font-size:.85rem;cursor:pointer}
+  .btn:hover{background:#2a2a28}
+  .btn.primary{background:var(--s1);border-color:transparent}
+  .btn.small{padding:4px 8px;font-size:.78rem}
+  .grid{display:grid;grid-auto-flow:dense;gap:var(--gap);grid-template-columns:repeat(auto-fit,minmax(300px,1fr));max-width:1400px;margin:0 auto}
+  .tile{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:16px 16px 14px;min-height:190px;display:flex;flex-direction:column;position:relative;overflow:hidden}
+  .tile.wide{grid-column:span 2}
+  @media (max-width:680px){.tile.wide{grid-column:span 1}}
+  .tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--accent,var(--s1))}
+  .tile h2{margin:0 0 2px;font-size:.78rem;font-weight:600;letter-spacing:.6px;text-transform:uppercase;color:var(--ink-2);display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .tile h2 a{font-weight:500;letter-spacing:0;text-transform:none;font-size:.8rem;color:var(--muted);text-decoration:none;white-space:nowrap}
+  .tile h2 a:hover{color:var(--ink);text-decoration:underline}
+  .hero{font-size:2.1rem;font-weight:700;line-height:1.1;margin:8px 0 2px}
+  .hero small{font-size:.95rem;font-weight:500;color:var(--ink-2);margin-left:6px}
+  .sub{color:var(--ink-2);font-size:.9rem;margin:0 0 10px}
+  .stats{display:flex;gap:18px;flex-wrap:wrap;margin:6px 0 10px}
+  .stat b{display:block;font-size:1.35rem;font-weight:700;line-height:1.1}
+  .stat span{font-size:.76rem;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+  ul.list{list-style:none;margin:0;padding:0;font-size:.9rem}
+  ul.list li{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-top:1px solid var(--grid)}
+  ul.list li:first-child{border-top:0}
+  ul.list .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  ul.list .r{color:var(--ink-2);white-space:nowrap;font-variant-numeric:tabular-nums}
+  ul.list li.wrap{flex-wrap:wrap} ul.list li.wrap .l,ul.list li.wrap .r{white-space:normal;text-align:left}
+  .pill{display:inline-block;padding:2px 8px;border-radius:999px;background:var(--surface-2);border:1px solid var(--border);font-size:.75rem;color:var(--ink-2);margin:2px 4px 2px 0}
+  .pill.dot::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c,var(--s1));margin-right:6px;vertical-align:1px}
+  .muted{color:var(--muted)} .small{font-size:.8rem}
+  .foot{margin-top:auto;padding-top:10px;font-size:.76rem;color:var(--muted);display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .err{color:var(--serious);font-size:.85rem;margin:6px 0}
+  .empty{border:1px dashed var(--axis);border-radius:10px;padding:14px;color:var(--ink-2);font-size:.88rem;margin:8px 0}
+  .empty ol{margin:8px 0 0 18px;padding:0} .empty li{margin:3px 0}
+  .posters{display:flex;gap:8px;margin:8px 0 10px;overflow-x:auto;scrollbar-width:none}
+  .posters::-webkit-scrollbar{display:none}
+  .posters img{height:96px;width:64px;object-fit:cover;border-radius:6px;background:var(--surface-2);flex:none;border:1px solid var(--border)}
+  .posters .ph{height:96px;width:64px;border-radius:6px;background:var(--surface-2);flex:none;display:flex;align-items:center;justify-content:center;font-size:.65rem;color:var(--muted);text-align:center;padding:4px;border:1px solid var(--border)}
+  .chart{width:100%;height:110px;display:block;margin:4px 0 2px;overflow:visible}
+  .chart rect.bar{fill:var(--c,var(--s1))} .chart rect.bar.hi{filter:brightness(1.25)}
+  .chart .grid line{stroke:var(--grid);stroke-width:1}
+  .chart .base{stroke:var(--axis);stroke-width:1}
+  .chart text{fill:var(--muted);font-size:10px;font-family:inherit}
+  .tip{position:fixed;pointer-events:none;background:#000;color:#fff;border:1px solid var(--border);border-radius:7px;padding:5px 8px;font-size:.78rem;z-index:50;display:none;white-space:nowrap}
+  .agenda .day{margin:8px 0 4px;font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .agenda .ev{display:flex;gap:10px;padding:5px 0;border-top:1px solid var(--grid);font-size:.9rem}
+  .agenda .ev .t{color:var(--ink-2);min-width:96px;font-variant-numeric:tabular-nums}
+  .agenda .ev.now{color:var(--ink)} .agenda .ev.now .t{color:var(--s4)}
+  .agenda .ev .n{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .cd{font-variant-numeric:tabular-nums}
+  .car{display:flex;gap:14px;align-items:center;margin:6px 0 8px}
+  .car svg{flex:none;width:130px;height:64px}
+  .timeline{display:flex;gap:3px;margin:8px 0 2px}
+  .timeline span{flex:1;height:8px;border-radius:2px;background:var(--surface-2);border:1px solid var(--border)}
+  .timeline span.cur{background:var(--s2);border-color:transparent}
+  .team{display:flex;flex-wrap:wrap;gap:4px;margin:6px 0}
+  /* settings drawer */
+  #drawer{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;z-index:40;align-items:flex-start;justify-content:center;padding:30px 12px;overflow:auto}
+  #drawer.open{display:flex}
+  .panel{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 18px 12px;width:100%;max-width:620px}
+  .panel h3{margin:0 0 4px;font-size:1.05rem}
+  .panel h4{margin:16px 0 6px;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-2)}
+  .panel label{display:block;font-size:.82rem;color:var(--ink-2);margin:8px 0 3px}
+  .panel input[type=text],.panel input[type=url],.panel textarea{width:100%;background:var(--page);border:1px solid var(--border);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;font-size:.88rem}
+  .panel textarea{min-height:60px;resize:vertical}
+  .panel .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
+  .panel p{font-size:.83rem;color:var(--ink-2);margin:4px 0}
+  .drop{border:1px dashed var(--axis);border-radius:10px;padding:14px;text-align:center;color:var(--ink-2);font-size:.85rem;margin-top:6px}
+  .drop.over{border-color:var(--s1);background:rgba(57,135,229,.08)}
+  input[type=file]{font-size:.85rem;color:var(--ink-2)}
+  .ok{color:var(--good)}
+  @media print{body{background:#fff;color:#000}}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Stux Dashboard</h1>
+    <div class="date" id="today"></div>
+  </div>
+  <div class="right">
+    <button class="btn" id="refresh" title="Reload live data">↻ Refresh</button>
+    <button class="btn" id="openSettings" title="Settings & data">⚙︎</button>
+  </div>
+</header>
+
+<main class="grid" id="grid">
+
+  <!-- Calendar -->
+  <section class="tile wide" id="tile-cal" style="--accent:var(--s4)">
+    <h2>Meetings &amp; calendar <a href="https://outlook.office.com/calendar/" target="_blank" rel="noopener">Outlook ↗</a></h2>
+    <div id="cal-body"><div class="empty">Loading…</div></div>
+    <div class="foot"><span id="cal-foot"></span><span id="cal-upd"></span></div>
+  </section>
+
+  <!-- Fitbit -->
+  <section class="tile wide" id="tile-fit" style="--accent:var(--s3)">
+    <h2>Health · Fitbit <a href="https://www.fitbit.com/" target="_blank" rel="noopener">Fitbit ↗</a></h2>
+    <div id="fit-body"><div class="empty">Loading…</div></div>
+    <div class="foot"><span id="fit-foot"></span><span id="fit-upd"></span></div>
+  </section>
+
+  <!-- Stuflix films -->
+  <section class="tile" id="tile-films" style="--accent:var(--s1)">
+    <h2>Films · Stu Country for Old Men <a href="https://stuartmcneil.github.io/stuflix/" target="_blank" rel="noopener">Stuflix ↗</a></h2>
+    <div id="films-body"><div class="empty">Loading…</div></div>
+    <div class="foot"><span id="films-foot"></span><span id="stuflix-upd"></span></div>
+  </section>
+
+  <!-- Stuflix TV -->
+  <section class="tile" id="tile-tv" style="--accent:var(--s7)">
+    <h2>TV · to watch &amp; watched <a href="https://stuartmcneil.github.io/stuflix/" target="_blank" rel="noopener">Stuflix ↗</a></h2>
+    <div id="tv-body"><div class="empty">Loading…</div></div>
+    <div class="foot"><span id="tv-foot"></span></div>
+  </section>
+
+  <!-- Nate's films -->
+  <section class="tile" id="tile-nate" style="--accent:var(--s5)">
+    <h2>Nate's film catalogue <a href="https://stuartmcneil.github.io/films/" target="_blank" rel="noopener">Open ↗</a></h2>
+    <div id="nate-body"><div class="empty">Loading…</div></div>
+    <div class="foot"><span id="nate-foot"></span><button class="btn small" id="nate-shuffle">Another pick</button></div>
+  </section>
+
+  <!-- F1 -->
+  <section class="tile" id="tile-f1" style="--accent:var(--s8)">
+    <h2>F1 Fantasy HQ <a href="https://stuartmcneil.github.io/f1/" target="_blank" rel="noopener">Tracker ↗</a></h2>
+    <div id="f1-body"><div class="empty">Loading…</div></div>
+    <div class="foot"><span id="f1-foot"></span><a href="https://fantasy.formula1.com" target="_blank" rel="noopener">fantasy.formula1.com ↗</a></div>
+  </section>
+
+  <!-- Cars -->
+  <section class="tile" id="tile-cars" style="--accent:var(--s2)">
+    <h2>Cars · Owners Workshop Manual <a href="https://stuartmcneil.github.io/cars/" target="_blank" rel="noopener">Cars ↗</a></h2>
+    <div id="cars-body"></div>
+    <div class="foot"><span id="cars-foot"></span><a href="https://stuartmcneil.github.io/window/" target="_blank" rel="noopener">Stuart McNeil ↗</a></div>
+  </section>
+
+</main>
+
+<div class="tip" id="tip"></div>
+
+<!-- Settings drawer -->
+<div id="drawer">
+  <div class="panel">
+    <h3>Settings &amp; data</h3>
+    <p>Everything is saved in this browser only (nothing is uploaded). Each device you open the dashboard on keeps its own settings.</p>
+
+    <h4>Calendar (Outlook)</h4>
+    <p>In Outlook on the web: <em>Settings → Calendar → Shared calendars → Publish a calendar</em>, choose your calendar and “Can view all details”, then copy the <b>ICS</b> link and paste it here. If your browser blocks the direct link (common with work tenants), download the .ics file instead and drop it below, or paste its contents.</p>
+    <label for="icsUrl">ICS feed URL</label>
+    <input type="url" id="icsUrl" placeholder="https://outlook.office365.com/owa/calendar/…/calendar.ics">
+    <label for="icsText">…or paste the contents of an .ics file</label>
+    <textarea id="icsText" placeholder="BEGIN:VCALENDAR …"></textarea>
+    <div class="drop" id="icsDrop">Drop an .ics file here, or <input type="file" id="icsFile" accept=".ics,text/calendar"></div>
+
+    <h4>Fitbit</h4>
+    <p>Export from <a href="https://www.fitbit.com/settings/data/export" target="_blank" rel="noopener">fitbit.com → Settings → Data export</a> (choose a date range and CSV), or use a Google Takeout / “Export your account archive” download. Drop the CSV, or the JSON files from the archive (steps-*.json, sleep-*.json, weight-*.json, resting_heart_rate-*.json). New files merge with what is already stored.</p>
+    <div class="drop" id="fitDrop">Drop Fitbit CSV / JSON files here, or <input type="file" id="fitFile" multiple accept=".csv,.json,text/csv,application/json"></div>
+    <p id="fitStatus" class="small"></p>
+
+    <h4>F1 Fantasy team</h4>
+    <p>The tracker keeps your team in its own browser storage, so type it here to show it on the dashboard.</p>
+    <label for="f1Team">Drivers &amp; constructors (comma-separated)</label>
+    <input type="text" id="f1Team" placeholder="Hamilton, Antonelli, Bortoleto, Hülkenberg, Lindblad, Ferrari, Racing Bulls">
+    <label for="f1Money">Team value / bank</label>
+    <input type="text" id="f1Money" placeholder="$108.8M · $0.5M in the bank">
+
+    <h4>Sources</h4>
+    <label for="stuflixUrl">Stuflix data.json</label>
+    <input type="url" id="stuflixUrl">
+    <label for="nateUrl">Nate's catalogue page</label>
+    <input type="url" id="nateUrl">
+    <label for="f1Url">F1 tracker data.js</label>
+    <input type="url" id="f1Url">
+
+    <div class="row">
+      <button class="btn primary" id="saveSettings">Save &amp; reload</button>
+      <button class="btn" id="closeSettings">Close</button>
+      <span style="flex:1"></span>
+      <button class="btn" id="clearData" title="Removes stored calendar, Fitbit and settings from this browser">Clear stored data</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ===================== helpers ===================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const TZ = "Europe/London";
+const fmtDay = d => d.toLocaleDateString("en-GB",{weekday:"short",day:"numeric",month:"short",timeZone:TZ});
+const fmtTime = d => d.toLocaleTimeString("en-GB",{hour:"2-digit",minute:"2-digit",timeZone:TZ});
+const dayKey = d => d.toLocaleDateString("en-CA",{timeZone:TZ}); // YYYY-MM-DD in London time
+const num = n => Number(n).toLocaleString("en-GB");
+const nowStamp = () => "updated " + fmtTime(new Date());
+
+const STORE = {
+  get(k, d){ try{ const v = localStorage.getItem("stuxdash."+k); return v===null? d : JSON.parse(v);}catch(e){ return d; } },
+  set(k, v){ try{ localStorage.setItem("stuxdash."+k, JSON.stringify(v)); }catch(e){} },
+  del(k){ try{ localStorage.removeItem("stuxdash."+k);}catch(e){} }
+};
+const DEFAULTS = {
+  stuflixUrl: "https://stuartmcneil.github.io/stuflix/data.json",
+  nateUrl: "https://stuartmcneil.github.io/films/",
+  f1Url: "https://stuartmcneil.github.io/f1/data/data.js",
+  icsUrl: "",
+  f1Team: "Hamilton, Antonelli, Bortoleto, Hülkenberg, Lindblad, Ferrari, Racing Bulls",
+  f1Money: "≈ $108.8M team value · $0.5M in the bank"
+};
+const settings = Object.assign({}, DEFAULTS, STORE.get("settings", {}));
+
+$("#today").textContent = new Date().toLocaleDateString("en-GB",{weekday:"long",day:"numeric",month:"long",year:"numeric",timeZone:TZ});
+
+/* tooltip */
+const tip = $("#tip");
+function showTip(e, html){ tip.innerHTML = html; tip.style.display="block"; moveTip(e); }
+function moveTip(e){ const x = e.clientX, y = e.clientY; tip.style.left = Math.min(x+12, innerWidth - tip.offsetWidth - 8) + "px"; tip.style.top = (y-34) + "px"; }
+function hideTip(){ tip.style.display="none"; }
+
+/* simple bar chart: data = [{label, value, title}] */
+function barChart(data, {color="var(--s1)", fmt=v=>num(v), unit="", target=null} = {}){
+  const W = 600, H = 110, padL = 4, padR = 4, padT = 8, padB = 18;
+  const max = Math.max(1, target||0, ...data.map(d=>d.value||0)) * 1.05;
+  const n = data.length, slot = (W - padL - padR)/n, bw = Math.max(2, slot - 2);
+  const y = v => padT + (H - padT - padB) * (1 - v/max);
+  let svg = `<svg class="chart" viewBox="0 0 ${W} ${H}" style="--c:${color}" preserveAspectRatio="none" role="img" aria-label="bar chart">`;
+  svg += `<g class="grid">`; for (let i=1;i<=2;i++){ const yy = padT + (H-padT-padB)*i/3; svg += `<line x1="0" x2="${W}" y1="${yy}" y2="${yy}"/>`; } svg += `</g>`;
+  if (target) svg += `<line x1="0" x2="${W}" y1="${y(target)}" y2="${y(target)}" stroke="var(--ink-2)" stroke-dasharray="3 3" stroke-width="1"/>`;
+  data.forEach((d,i)=>{
+    const x = padL + i*slot + 1, v = d.value||0, top = y(v), h = Math.max(0, H - padB - top);
+    const r = Math.min(4, bw/2);
+    // rounded top, flat base
+    const path = h>0 ? `M${x},${H-padB} V${top+r} Q${x},${top} ${x+r},${top} H${x+bw-r} Q${x+bw},${top} ${x+bw},${top+r} V${H-padB} Z` : "";
+    svg += `<path class="bar" d="${path}" fill="var(--c)" data-i="${i}"${d.hi?' style="filter:brightness(1.3)"':''}></path>`;
+    svg += `<rect x="${x-1}" y="0" width="${bw+2}" height="${H}" fill="transparent" data-i="${i}" class="hit"/>`;
+    if (n <= 16 || i % Math.ceil(n/14) === 0) svg += `<text x="${x+bw/2}" y="${H-5}" text-anchor="middle">${esc(d.label)}</text>`;
+  });
+  svg += `<line class="base" x1="0" x2="${W}" y1="${H-padB}" y2="${H-padB}"/></svg>`;
+  const wrap = document.createElement("div"); wrap.innerHTML = svg;
+  const el = wrap.firstChild;
+  el.addEventListener("pointermove", e => {
+    const t = e.target.closest("[data-i]"); if(!t){ hideTip(); return; }
+    const d = data[+t.dataset.i]; showTip(e, `<b>${esc(d.title||d.label)}</b> · ${fmt(d.value)}${unit}`);
+  });
+  el.addEventListener("pointerleave", hideTip);
+  return el;
+}
+
+async function fetchText(url){
+  const r = await fetch(url, {cache:"no-store"});
+  if (!r.ok) throw new Error("HTTP " + r.status);
+  return r.text();
+}
+
+/* ===================== Stuflix (films & TV) ===================== */
+function rows(items){ return Object.values(items||{}); }
+function gradeOf(i){ return i.grade && i.grade.overall != null ? Number(i.grade.overall) : null; }
+function sortByAdded(a,b){ return (b.movedAt||b.addedAt||"").localeCompare(a.movedAt||a.addedAt||""); }
+
+function renderStuflixSection(body, foot, list, kind){
+  const cat = list.filter(i=>i.status==="catalogue"), want = list.filter(i=>i.status==="want"),
+        watched = list.filter(i=>i.status==="watched"), removed = list.filter(i=>i.status==="removed");
+  const toWatch = [...want, ...cat];
+  const graded = watched.filter(i=>gradeOf(i)!=null);
+  const avg = graded.length ? (graded.reduce((s,i)=>s+gradeOf(i),0)/graded.length) : null;
+  const top = [...graded].sort((a,b)=>gradeOf(b)-gradeOf(a) || (b.year||0)-(a.year||0)).slice(0,3);
+  const recent = [...watched].sort(sortByAdded).slice(0,3);
+  const next = [...want, ...cat.sort((a,b)=>(b.scores?.imdb||b.tmdbRating||0)-(a.scores?.imdb||a.tmdbRating||0))].slice(0,10);
+  let h = `<div class="stats">
+    <div class="stat"><b>${toWatch.length}</b><span>to watch</span></div>
+    <div class="stat"><b>${watched.length}</b><span>watched</span></div>
+    <div class="stat"><b>${avg!=null ? avg.toFixed(1) : "–"}</b><span>avg grade /10</span></div>
+    ${want.length? `<div class="stat"><b>${want.length}</b><span>want-list</span></div>`:""}
+  </div>`;
+  h += `<div class="posters">` + next.map(i => i.poster
+      ? `<img src="${esc(i.poster)}" alt="${esc(i.title)}" title="${esc(i.title)} (${esc(i.year||"")})" loading="lazy" onerror="const d=document.createElement('div');d.className='ph';d.textContent=this.alt;this.replaceWith(d)">`
+      : `<div class="ph">${esc(i.title)}</div>`).join("") + `</div>`;
+  h += `<ul class="list">`;
+  if (top.length) h += `<li class="wrap"><span class="l muted small">Top graded</span><span class="r small">${top.map(i=>esc(i.title)+" "+gradeOf(i)).join(" · ")}</span></li>`;
+  recent.forEach(i => h += `<li><span class="l">${esc(i.title)} <span class="muted">${esc(i.year||"")}</span></span><span class="r">${gradeOf(i)!=null? "★ "+gradeOf(i) : "watched"}</span></li>`);
+  h += `</ul>`;
+  body.innerHTML = h;
+  foot.textContent = `${cat.length} in catalogue${removed.length? " · "+removed.length+" removed":""}`;
+}
+
+async function loadStuflix(){
+  const fb = $("#films-body"), tb = $("#tv-body");
+  try{
+    const data = JSON.parse(await fetchText(settings.stuflixUrl));
+    renderStuflixSection(fb, $("#films-foot"), rows(data.films?.items), "film");
+    renderStuflixSection(tb, $("#tv-foot"), rows(data.tv?.items), "tv");
+    const upd = data.updatedAt ? new Date(data.updatedAt) : null;
+    $("#stuflix-upd").textContent = upd ? "data " + fmtDay(upd) + " " + fmtTime(upd) : "";
+  }catch(e){
+    const msg = `<div class="err">Couldn't load Stuflix data (${esc(e.message)}). If you opened this file from OneDrive's preview, use “Open in Safari/Chrome” — the preview blocks scripts and network.</div>`;
+    fb.innerHTML = msg; tb.innerHTML = msg;
+  }
+}
+
+/* ===================== Nate's catalogue ===================== */
+let NATE = [];
+function renderNate(){
+  const body = $("#nate-body"), foot = $("#nate-foot");
+  if (!NATE.length){ return; }
+  const genres = {};
+  NATE.forEach(f => { genres[f.genre] = (genres[f.genre]||0)+1; });
+  const topG = Object.entries(genres).sort((a,b)=>b[1]-a[1]).slice(0,6);
+  const pick = NATE[Math.floor(Math.random()*NATE.length)];
+  const rt = NATE.filter(f=>f.rating>=8).length;
+  body.innerHTML = `
+    <div class="stats">
+      <div class="stat"><b>${NATE.length}</b><span>films on the shelf</span></div>
+      <div class="stat"><b>${rt}</b><span>rated 8.0+</span></div>
+      <div class="stat"><b>${Object.keys(genres).length}</b><span>genres</span></div>
+    </div>
+    <div class="sub">Tonight's pick</div>
+    <div style="font-size:1.15rem;font-weight:700">${esc(pick.title)} <span class="muted" style="font-weight:500">${esc(pick.year)} · ${esc(pick.cert)} · ${pick.mins} min · ★ ${pick.rating}</span></div>
+    <div class="sub small" style="margin-top:4px">${esc(pick.blurb)}</div>
+    <div>${topG.map(([g,c])=>`<span class="pill">${esc(g)} <span class="muted">${c}</span></span>`).join("")}</div>`;
+  foot.textContent = "Watched ticks live in Nate's own browser";
+}
+async function loadNate(){
+  const body = $("#nate-body");
+  try{
+    const html = await fetchText(settings.nateUrl);
+    const m = html.match(/const SHELF\s*=\s*(\[[\s\S]*?\n\]);/);
+    if (!m) throw new Error("film list not found in page");
+    const arr = Function('"use strict";return (' + m[1] + ')')();
+    NATE = arr.map(a => ({title:a[0], year:a[1], cert:a[2], mins:a[3], rating:a[4], genre:a[5], blurb:a[6]}));
+    renderNate();
+  }catch(e){
+    body.innerHTML = `<div class="err">Couldn't load Nate's catalogue (${esc(e.message)}).</div>`;
+  }
+}
+$("#nate-shuffle").addEventListener("click", renderNate);
+
+/* ===================== F1 ===================== */
+let F1D = null, F1TIMER = null;
+function loadScript(src){
+  return new Promise((res, rej) => { const s = document.createElement("script"); s.src = src + (src.includes("?")?"&":"?") + "v=" + Date.now(); s.onload = res; s.onerror = () => rej(new Error("script failed to load")); document.head.appendChild(s); });
+}
+function driverName(D, id){ const d = D.drivers.find(x=>x.id===id); return d ? d.last : id; }
+function teamName(D, id){ const t = D.teams.find(x=>x.id===id); return t ? (t.short||t.name) : id; }
+async function loadF1(){
+  const body = $("#f1-body"), foot = $("#f1-foot");
+  try{
+    await loadScript(settings.f1Url);
+    F1D = window.F1DATA; if (!F1D) throw new Error("no F1DATA");
+    const cal = F1D.calendar, now = new Date();
+    const next = cal.find(r => !r.winner && new Date(r.date+"T23:59:59Z") >= now) || cal.find(r=>!r.winner) || cal[cal.length-1];
+    const done = cal.filter(r=>r.winner);
+    const last = done[done.length-1];
+    const dl = next.deadline ? new Date(next.deadline) : new Date(next.date+"T12:00:00Z");
+    const drivers = [...F1D.drivers].sort((a,b)=>(a.pos||99)-(b.pos||99)).slice(0,3);
+    const teamBits = (settings.f1Team||"").split(",").map(s=>s.trim()).filter(Boolean);
+    const cd = () => { const ms = dl - new Date(); if (ms<0) return "lock-in passed"; const d=Math.floor(ms/864e5), h=Math.floor(ms%864e5/36e5), m=Math.floor(ms%36e5/6e4); return (d? d+"d ":"") + h+"h "+m+"m to lock-in"; };
+    body.innerHTML = `
+      <div class="sub">Next: Round ${next.round} of ${cal.length}</div>
+      <div class="hero" style="font-size:1.5rem">${next.flag||""} ${esc(next.name)}</div>
+      <div class="sub">${esc(next.circuit)} · race ${fmtDay(new Date(next.date+"T12:00:00Z"))}${next.sprint?" · Sprint weekend":""}${next.newCircuit?" · new circuit":""}</div>
+      <div class="cd" id="f1cd" style="color:var(--s4);font-weight:600">${cd()}</div>
+      <div class="timeline">${cal.map(r=>`<span class="${r.winner?'cur':''}" title="R${r.round} ${esc(r.short||r.name)}${r.winner? ' — '+esc(driverName(F1D,r.winner)):''}"></span>`).join("")}</div>
+      <ul class="list" style="margin-top:8px">
+        ${last? `<li class="wrap"><span class="l">Last race: ${esc(last.short||last.name)}</span><span class="r">${esc(driverName(F1D,last.winner))} (${esc(teamName(F1D,last.winTeam))})</span></li>`:""}
+        <li class="wrap"><span class="l">Championship</span><span class="r">${drivers.map(d=>esc(d.last)+" "+d.points).join(" · ")}</span></li>
+      </ul>
+      <div class="sub" style="margin:8px 0 2px">My team</div>
+      <div class="team">${teamBits.map(t=>`<span class="pill">${esc(t)}</span>`).join("") || '<span class="muted small">Add your team in ⚙︎ settings</span>'}</div>
+      <div class="small muted">${esc(settings.f1Money||"")}</div>`;
+    foot.textContent = `Season data generated ${F1D.generated} · after round ${F1D.lastCompletedRound}`;
+    if (F1TIMER) clearInterval(F1TIMER);
+    F1TIMER = setInterval(()=>{ const el = $("#f1cd"); if (el) el.textContent = cd(); }, 30000);
+  }catch(e){
+    body.innerHTML = `<div class="err">Couldn't load F1 tracker data (${esc(e.message)}).</div>`;
+  }
+}
+
+/* ===================== Cars ===================== */
+const CARS = [
+  ["Fiat 126","red"],["Ford Fiesta","red · N-reg"],["Toyota MR2 Mk2 Turbo","red · T-bar"],
+  ["Saab 900","white · K140 MEU"],["Saab 9000 Aero","deep blue · M218 VCH"],["Fiat 500 Sport TwinAir","white · CE10 XVW"],
+  ["VW T25 campervan","yellow · E431 DOD"],["Fiat 500 Sport TwinAir","white · HG63 CYH"],["Alfa Romeo MiTo QV Line","black · MC15 NNT"],
+  ["VW Tiguan R-Line TDI 4Motion","FH69 ZGO"]
+];
+function renderCars(){
+  const cur = CARS[CARS.length-1];
+  $("#cars-body").innerHTML = `
+    <div class="car">
+      <svg viewBox="0 0 130 64" aria-hidden="true"><g fill="none" stroke="var(--ink-2)" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M8 44 L14 30 Q18 22 30 20 L52 14 Q70 10 88 16 L106 22 Q118 26 122 34 L124 44 Z"/>
+        <path d="M34 20 L40 13 Q60 8 84 16"/><path d="M8 44 H124"/><path d="M18 44 v4 h8"/><path d="M104 44 v4 h8"/>
+        <circle cx="34" cy="46" r="8" fill="var(--surface)"/><circle cx="34" cy="46" r="3"/><circle cx="98" cy="46" r="8" fill="var(--surface)"/><circle cx="98" cy="46" r="3"/>
+        <path d="M60 15 v14"/><path d="M62 18 h14 l4 10"/></g></svg>
+      <div>
+        <div class="sub" style="margin:0">Currently driving · car ${CARS.length}</div>
+        <div style="font-size:1.15rem;font-weight:700">${esc(cur[0])}</div>
+        <div class="muted small">${esc(cur[1])}</div>
+      </div>
+    </div>
+    <div class="sub">Ownership history</div>
+    <ul class="list small">${CARS.slice(0,-1).reverse().map((c,i)=>`<li><span class="l">${esc(c[0])}</span><span class="r">${esc(c[1])}</span></li>`).join("")}</ul>`;
+  $("#cars-foot").textContent = `${CARS.length} cars owned · 2 Saabs, 2 Fiat 500s`;
+}
+
+/* ===================== Calendar (ICS) ===================== */
+function unfoldICS(text){ return text.replace(/\r\n/g,"\n").replace(/\n[ \t]/g,""); }
+function parseICSDate(val, params){
+  // val e.g. 20260906T090000Z | 20260906T090000 (with TZID) | 20260906 (DATE)
+  const m = val.match(/^(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})(\d{2})?(Z)?)?$/);
+  if (!m) return null;
+  const [_, Y, Mo, D, h, mi, s, z] = m;
+  if (!h) return { date: new Date(Date.UTC(+Y,+Mo-1,+D,12,0,0)), allDay:true };
+  if (z) return { date: new Date(Date.UTC(+Y,+Mo-1,+D,+h,+mi,+(s||0))), allDay:false };
+  // floating / TZID: treat as London local (Outlook UK tenant). Build via offset lookup.
+  const tzid = (params.match(/TZID=([^;:]+)/)||[])[1] || TZ;
+  const zone = /London|GMT Standard|Greenwich/i.test(tzid) ? TZ : (/^[A-Za-z]+\/[A-Za-z_]+$/.test(tzid) ? tzid : TZ);
+  return { date: zonedToUTC(+Y,+Mo-1,+D,+h,+mi,+(s||0),zone), allDay:false };
+}
+function zonedToUTC(Y,M0,D,h,mi,s,zone){
+  const guess = new Date(Date.UTC(Y,M0,D,h,mi,s||0));
+  const parts = new Intl.DateTimeFormat("en-GB",{timeZone:zone,hourCycle:"h23",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit"}).formatToParts(guess);
+  const get = t => +parts.find(p=>p.type===t).value;
+  const asUTC = Date.UTC(get("year"),get("month")-1,get("day"),get("hour"),get("minute"));
+  const offset = asUTC - guess.getTime(); // zone ahead of UTC → positive
+  return new Date(guess.getTime() - offset);
+}
+// same wall-clock time (London) as `ref`, on the calendar day of `day`
+function sameWallTime(ref, day){
+  const p = new Intl.DateTimeFormat("en-GB",{timeZone:TZ,hourCycle:"h23",hour:"2-digit",minute:"2-digit",second:"2-digit"}).formatToParts(ref);
+  const g = t => +p.find(x=>x.type===t).value;
+  const [Y,M,D] = dayKey(day).split("-").map(Number);
+  return zonedToUTC(Y,M-1,D,g("hour"),g("minute"),g("second"),TZ);
+}
+function parseICS(text){
+  const lines = unfoldICS(text).split("\n"), evs = []; let cur = null;
+  for (const line of lines){
+    if (line === "BEGIN:VEVENT"){ cur = {}; continue; }
+    if (line === "END:VEVENT"){ if (cur && cur.start) evs.push(cur); cur = null; continue; }
+    if (!cur) continue;
+    const idx = line.indexOf(":"); if (idx<0) continue;
+    const head = line.slice(0, idx), val = line.slice(idx+1);
+    const key = head.split(";")[0];
+    if (key==="SUMMARY") cur.title = val.replace(/\\,/g,",").replace(/\\n/g," ");
+    else if (key==="LOCATION") cur.location = val.replace(/\\,/g,",");
+    else if (key==="DTSTART"){ const p = parseICSDate(val, head); if (p){ cur.start = p.date; cur.allDay = p.allDay; } }
+    else if (key==="DTEND"){ const p = parseICSDate(val, head); if (p) cur.end = p.date; }
+    else if (key==="RRULE") cur.rrule = val;
+    else if (key==="STATUS") cur.status = val;
+  }
+  return evs;
+}
+// Expand simple weekly/daily recurrences over a window (enough for a work calendar's regular meetings)
+function expandRecurring(evs, from, to){
+  const out = [];
+  for (const e of evs){
+    if (e.status === "CANCELLED") continue;
+    if (!e.rrule){ out.push(e); continue; }
+    const r = Object.fromEntries(e.rrule.split(";").map(kv=>kv.split("=")));
+    const dur = (e.end||e.start) - e.start;
+    const until = r.UNTIL ? (parseICSDate(r.UNTIL,"")||{}).date : null;
+    const interval = +(r.INTERVAL||1); let count = r.COUNT? +r.COUNT : Infinity;
+    const dayMap = {SU:0,MO:1,TU:2,WE:3,TH:4,FR:5,SA:6};
+    const byday = r.BYDAY ? r.BYDAY.split(",").map(d=>dayMap[d.replace(/^[-+]?\d+/,"")]) : null;
+    if (r.FREQ==="DAILY"){
+      let t = new Date(e.start), n=0, guard=0;
+      while (t <= to && guard++ < 3000 && n < count){
+        if (until && t > until) break;
+        n++; if (t >= from) out.push(Object.assign({}, e, {start:new Date(t), end:new Date(t.getTime()+dur), recur:true}));
+        t = new Date(t.getTime() + 864e5*interval);
+      }
+    } else if (r.FREQ==="WEEKLY"){
+      // walk day by day from the first occurrence; a day counts if it is in BYDAY (or same weekday as the start)
+      // and falls in an "on" week according to INTERVAL (weeks starting Monday).
+      const wd = d => ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"].indexOf(d.toLocaleDateString("en-US",{weekday:"short",timeZone:TZ}));
+      const days = byday || [wd(e.start)];
+      const startWeek = Math.floor((e.start.getTime() - (wd(e.start)+6)%7*864e5) / (7*864e5));
+      let t = new Date(e.start), n=0, guard=0;
+      while (t <= to && guard++ < 5000 && n < count){
+        if (until && t > until) break;
+        const week = Math.floor((t.getTime() - (wd(t)+6)%7*864e5) / (7*864e5));
+        if (days.includes(wd(t)) && (week - startWeek) % interval === 0){
+          const st = e.allDay ? new Date(t) : sameWallTime(e.start, t);
+          n++; if (st >= from) out.push(Object.assign({}, e, {start:st, end:new Date(st.getTime()+dur), recur:true}));
+        }
+        t = new Date(t.getTime() + 864e5);
+      }
+    } else if (r.FREQ==="MONTHLY" || r.FREQ==="YEARLY"){
+      let t = new Date(e.start), guard=0;
+      while (t <= to && guard++ < 200){
+        if (until && t > until) break;
+        if (t >= from) out.push(Object.assign({}, e, {start:new Date(t), end:new Date(t.getTime()+dur), recur:true}));
+        const d = new Date(t); if (r.FREQ==="MONTHLY") d.setMonth(d.getMonth()+interval); else d.setFullYear(d.getFullYear()+interval); t = d;
+      }
+    } else out.push(e);
+  }
+  return out;
+}
+function renderCalendar(evsRaw, source){
+  const body = $("#cal-body"), foot = $("#cal-foot");
+  const now = new Date(), from = new Date(now.getTime() - 2*3600e3), to = new Date(now.getTime() + 8*864e5);
+  const evs = expandRecurring(evsRaw, new Date(now.getTime()-30*864e5), to)
+    .filter(e => e.start && (e.end||e.start) >= from && e.start <= to)
+    .sort((a,b)=>a.start-b.start);
+  const todayK = dayKey(now);
+  const todayEvs = evs.filter(e=>dayKey(e.start)===todayK && !e.allDay);
+  const nextUp = evs.find(e => !e.allDay && e.start > now);
+  let h = `<div class="stats">
+      <div class="stat"><b>${todayEvs.length}</b><span>meetings today</span></div>
+      <div class="stat"><b>${nextUp ? fmtTime(nextUp.start) : "–"}</b><span>${nextUp ? (dayKey(nextUp.start)===todayK ? "next today" : "next · "+fmtDay(nextUp.start)) : "nothing upcoming"}</span></div>
+      <div class="stat"><b>${evs.filter(e=>!e.allDay && e.start>now).length}</b><span>in the next 8 days</span></div>
+    </div>`;
+  if (!evs.length) h += `<div class="empty">No events in the next 8 days.</div>`;
+  else {
+    h += `<div class="agenda">`; let lastK = "";
+    for (const e of evs.slice(0,40)){
+      const k = dayKey(e.start);
+      if (k !== lastK){ h += `<div class="day">${k===todayK? "Today · ":""}${fmtDay(e.start)}</div>`; lastK = k; }
+      const live = !e.allDay && e.start <= now && (e.end||e.start) >= now;
+      h += `<div class="ev ${live?'now':''}"><span class="t">${e.allDay ? "All day" : fmtTime(e.start) + (e.end? "–"+fmtTime(e.end):"")}</span><span class="n" title="${esc(e.location||"")}">${esc(e.title||"(no title)")}${e.location? ` <span class="muted small">· ${esc(e.location)}</span>`:""}</span></div>`;
+    }
+    h += `</div>`;
+  }
+  body.innerHTML = h;
+  foot.textContent = source;
+}
+async function loadCalendar(){
+  const body = $("#cal-body");
+  let text = null, source = "";
+  if (settings.icsUrl){
+    try{ text = await fetchText(settings.icsUrl); source = "Live from Outlook ICS feed"; STORE.set("icsCache", {text, at:Date.now()}); }
+    catch(e){
+      const c = STORE.get("icsCache");
+      if (c){ text = c.text; source = "Feed unreachable — showing copy from " + fmtDay(new Date(c.at)); }
+      else source = "Feed blocked by browser (" + e.message + ")";
+    }
+  }
+  if (!text){ const t = STORE.get("icsText"); if (t){ text = t.text; source = "From .ics file saved " + fmtDay(new Date(t.at)); } }
+  if (!text){
+    body.innerHTML = `<div class="empty">No calendar connected yet.
+      <ol><li>Outlook on the web → Settings → Calendar → <b>Shared calendars → Publish a calendar</b> → copy the ICS link.</li>
+      <li>Paste it in ⚙︎ settings. If the browser can't reach it (work tenants often block this), download the .ics file and drop it in settings instead.</li></ol></div>`;
+    $("#cal-foot").textContent = source; return;
+  }
+  try{ renderCalendar(parseICS(text), source); $("#cal-upd").textContent = nowStamp(); }
+  catch(e){ body.innerHTML = `<div class="err">Couldn't read the calendar (${esc(e.message)}).</div>`; }
+}
+
+/* ===================== Fitbit ===================== */
+// stored shape: { "YYYY-MM-DD": {steps, sleepMin, weightKg, rhr, activeMin, distanceKm, cals, floors} }
+function mergeFit(days){ const cur = STORE.get("fit", {}); for (const [k,v] of Object.entries(days)){ if (!validKey(k)) continue; cur[k] = Object.assign(cur[k]||{}, v); } STORE.set("fit", cur); return cur; }
+function toISODate(s){
+  if (!s) return null; s = String(s).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})/); if (m) return `${m[1]}-${m[2]}-${m[3]}`;
+  m = s.match(/^(\d{1,2})([\/\-.])(\d{1,2})\2(\d{2,4})/);
+  if (m){
+    let a = +m[1], b = +m[3], y = m[4].length===2 ? "20"+m[4] : m[4];
+    // Fitbit US exports are MM/DD/YY; UK-style dashes/dots are DD-MM-YYYY. Disambiguate where possible.
+    let mo, d;
+    if (a > 12) { d = a; mo = b; } else if (b > 12) { mo = a; d = b; } else if (m[2] === "/") { mo = a; d = b; } else { d = a; mo = b; }
+    if (mo < 1 || mo > 12 || d < 1 || d > 31) return null;
+    return `${y}-${String(mo).padStart(2,"0")}-${String(d).padStart(2,"0")}`;
+  }
+  const d = new Date(s); return isNaN(d) ? null : dayKey(d);
+}
+const validKey = k => /^\d{4}-\d{2}-\d{2}$/.test(k) && !isNaN(new Date(k+"T12:00:00Z"));
+function parseCSVLine(line){ const out=[]; let cur="", q=false; for (let i=0;i<line.length;i++){ const c=line[i]; if (c==='"'){ if (q && line[i+1]==='"'){ cur+='"'; i++; } else q=!q; } else if (c===',' && !q){ out.push(cur); cur=""; } else cur+=c; } out.push(cur); return out.map(s=>s.trim()); }
+function parseFitbitCSV(text){
+  const lines = text.replace(/\r/g,"").split("\n"); const days = {}; let section = null, headers = null;
+  const numv = s => { const n = parseFloat(String(s).replace(/,/g,"").replace(/"/g,"")); return isNaN(n)? null : n; };
+  for (const raw of lines){
+    const line = raw.trim(); if (!line) { headers = null; continue; }
+    if (/^(Body|Activities|Sleep|Foods|Food Log)/i.test(line) && !line.includes(",")){ section = line.split(" ")[0]; headers=null; continue; }
+    const cells = parseCSVLine(line);
+    if (!headers){ headers = cells.map(h=>h.toLowerCase()); if (!section){ // infer section from headers
+        if (headers.includes("steps")) section="Activities"; else if (headers.some(h=>h.includes("asleep"))) section="Sleep"; else if (headers.includes("weight")) section="Body"; } continue; }
+    const row = {}; headers.forEach((h,i)=>row[h]=cells[i]);
+    if (section==="Activities"){
+      const k = toISODate(row.date); if (!k) continue;
+      days[k] = Object.assign(days[k]||{}, { steps: numv(row.steps), cals: numv(row["calories burned"]), distanceKm: numv(row.distance), floors: numv(row.floors),
+        activeMin: (numv(row["minutes fairly active"])||0) + (numv(row["minutes very active"])||0) });
+    } else if (section==="Sleep"){
+      const k = toISODate(row["end time"] || row["start time"] || row.date); if (!k) continue;
+      const mins = numv(row["minutes asleep"]); if (mins==null) continue;
+      days[k] = Object.assign(days[k]||{}, { sleepMin: (days[k]?.sleepMin||0) + mins });
+    } else if (section==="Body"){
+      const k = toISODate(row.date); if (!k) continue;
+      const w = numv(row.weight); if (w!=null) days[k] = Object.assign(days[k]||{}, { weightKg: w > 130 ? +(w*0.4536).toFixed(1) : w }); // lbs guard
+    }
+  }
+  return days;
+}
+function parseFitbitJSON(name, json){
+  const days = {}; const arr = Array.isArray(json) ? json : (json.sleep || json.data || []);
+  const lname = name.toLowerCase();
+  if (lname.startsWith("steps") || lname.startsWith("calories") || lname.startsWith("distance") || lname.startsWith("very_active") || lname.startsWith("moderately_active")){
+    for (const r of arr){ const k = toISODate(r.dateTime); if (!k) continue; const v = parseFloat(r.value)||0; days[k] = days[k]||{};
+      if (lname.startsWith("steps")) days[k].steps = (days[k].steps||0)+v;
+      else if (lname.startsWith("calories")) days[k].cals = (days[k].cals||0)+v;
+      else if (lname.startsWith("distance")) days[k].distanceKm = (days[k].distanceKm||0)+v/100000; // cm
+      else days[k].activeMin = (days[k].activeMin||0)+v; }
+  } else if (lname.startsWith("sleep")){
+    for (const r of arr){ const k = toISODate(r.dateOfSleep); if (!k) continue; days[k] = days[k]||{}; days[k].sleepMin = (days[k].sleepMin||0) + (r.minutesAsleep||0); }
+  } else if (lname.startsWith("weight")){
+    for (const r of arr){ const k = toISODate(r.date); if (!k) continue; const w = parseFloat(r.weight); days[k] = Object.assign(days[k]||{}, { weightKg: w > 130 ? +(w*0.4536).toFixed(1) : w }); }
+  } else if (lname.startsWith("resting_heart_rate")){
+    for (const r of arr){ const k = toISODate(r.dateTime || r.value?.date); const v = r.value?.value; if (!k || !v) continue; days[k] = Object.assign(days[k]||{}, { rhr: Math.round(v) }); }
+  } else if (lname.startsWith("heart_rate")) { /* per-second — skipped on purpose */ }
+  else throw new Error("unrecognised Fitbit file: " + name);
+  return days;
+}
+async function importFitbitFiles(files){
+  const st = $("#fitStatus"); let total = 0, msgs = [];
+  for (const f of files){
+    try{
+      const text = await f.text(); let days;
+      if (f.name.toLowerCase().endsWith(".json")) days = parseFitbitJSON(f.name, JSON.parse(text));
+      else days = parseFitbitCSV(text);
+      const n = Object.keys(days).length; total += n; mergeFit(days); msgs.push(`${f.name}: ${n} days`);
+    }catch(e){ msgs.push(`${f.name}: ${e.message}`); }
+  }
+  st.innerHTML = `<span class="${total?'ok':''}">${esc(msgs.join(" · "))}</span>`;
+  renderFitbit();
+}
+function renderFitbit(){
+  const body = $("#fit-body"), foot = $("#fit-foot");
+  const fit = STORE.get("fit", {});
+  const keys = Object.keys(fit).sort();
+  if (!keys.length){
+    body.innerHTML = `<div class="empty">No Fitbit data yet.
+      <ol><li>Fitbit → Settings → <b>Data export</b> → pick a range, CSV → download.</li><li>Open ⚙︎ settings and drop the file in. Repeat whenever you want to top it up — new days merge in.</li></ol></div>`;
+    foot.textContent = ""; return;
+  }
+  const lastK = keys[keys.length-1];
+  const last14 = []; const end = new Date(lastK+"T12:00:00Z");
+  for (let i=13;i>=0;i--){ const d = new Date(end.getTime()-i*864e5); const k = d.toISOString().slice(0,10); last14.push({k, d, v: fit[k]||{}}); }
+  const withSteps = last14.filter(x=>x.v.steps!=null), avgSteps = withSteps.length ? Math.round(withSteps.reduce((s,x)=>s+x.v.steps,0)/withSteps.length) : null;
+  const withSleep = last14.filter(x=>x.v.sleepMin), avgSleep = withSleep.length ? withSleep.reduce((s,x)=>s+x.v.sleepMin,0)/withSleep.length : null;
+  const lastW = [...keys].reverse().map(k=>fit[k].weightKg).find(w=>w!=null);
+  const lastRHR = [...keys].reverse().map(k=>fit[k].rhr).find(w=>w!=null);
+  const lastDay = fit[lastK];
+  const hm = m => m==null ? "–" : `${Math.floor(m/60)}h ${String(Math.round(m%60)).padStart(2,"0")}m`;
+  body.innerHTML = `
+    <div class="stats">
+      <div class="stat"><b>${lastDay.steps!=null? num(Math.round(lastDay.steps)):"–"}</b><span>steps · ${fmtDay(new Date(lastK+"T12:00:00Z"))}</span></div>
+      <div class="stat"><b>${avgSteps!=null? num(avgSteps):"–"}</b><span>14-day avg steps</span></div>
+      <div class="stat"><b>${hm(avgSleep)}</b><span>avg sleep</span></div>
+      ${lastRHR? `<div class="stat"><b>${lastRHR}</b><span>resting HR</span></div>`:""}
+      ${lastW? `<div class="stat"><b>${lastW}</b><span>kg</span></div>`:""}
+    </div>
+    <div class="sub small" style="margin-bottom:0">Steps · last 14 days <span class="muted">(dashed line = 10,000)</span></div>
+    <div id="fit-steps"></div>
+    <div class="sub small" style="margin:8px 0 0">Sleep · hours asleep</div>
+    <div id="fit-sleep"></div>`;
+  const lab = x => x.d.toLocaleDateString("en-GB",{weekday:"narrow",timeZone:"UTC"});
+  $("#fit-steps").appendChild(barChart(last14.map(x=>({label:lab(x), value:x.v.steps||0, title:fmtDay(x.d), hi:x.k===lastK})), {color:"var(--s3)", unit:" steps", target:10000}));
+  $("#fit-sleep").appendChild(barChart(last14.map(x=>({label:lab(x), value:+((x.v.sleepMin||0)/60).toFixed(2), title:fmtDay(x.d)})), {color:"var(--s7)", unit:" h", fmt:v=>hm(v*60)}));
+  foot.textContent = `${keys.length} days stored · ${keys[0]} → ${lastK}`;
+  $("#fit-upd").textContent = "imported data — drop a new export in ⚙︎ to update";
+}
+
+/* ===================== settings UI ===================== */
+const drawer = $("#drawer");
+function openSettings(){
+  $("#icsUrl").value = settings.icsUrl||""; $("#stuflixUrl").value = settings.stuflixUrl; $("#nateUrl").value = settings.nateUrl; $("#f1Url").value = settings.f1Url;
+  $("#f1Team").value = settings.f1Team||""; $("#f1Money").value = settings.f1Money||"";
+  const t = STORE.get("icsText"); $("#icsText").value = t ? t.text : ""; $("#fitStatus").textContent = "";
+  drawer.classList.add("open");
+}
+$("#openSettings").addEventListener("click", openSettings);
+$("#closeSettings").addEventListener("click", ()=>drawer.classList.remove("open"));
+drawer.addEventListener("click", e => { if (e.target===drawer) drawer.classList.remove("open"); });
+$("#saveSettings").addEventListener("click", ()=>{
+  ["icsUrl","stuflixUrl","nateUrl","f1Url","f1Team","f1Money"].forEach(k => settings[k] = $("#"+k).value.trim() || DEFAULTS[k]);
+  if (!$("#icsUrl").value.trim()) settings.icsUrl = "";
+  STORE.set("settings", settings);
+  const txt = $("#icsText").value.trim(); if (txt) STORE.set("icsText", {text:txt, at:Date.now()}); else STORE.del("icsText");
+  drawer.classList.remove("open"); loadAll();
+});
+$("#clearData").addEventListener("click", ()=>{ if (confirm("Remove stored calendar, Fitbit data and settings from this browser?")){ ["settings","icsText","icsCache","fit"].forEach(STORE.del); location.reload(); } });
+function wireDrop(zone, input, handler){
+  zone.addEventListener("dragover", e=>{ e.preventDefault(); zone.classList.add("over"); });
+  zone.addEventListener("dragleave", ()=>zone.classList.remove("over"));
+  zone.addEventListener("drop", e=>{ e.preventDefault(); zone.classList.remove("over"); handler([...e.dataTransfer.files]); });
+  input.addEventListener("change", ()=>{ handler([...input.files]); input.value=""; });
+}
+wireDrop($("#icsDrop"), $("#icsFile"), async files => { const f = files[0]; if (!f) return; const text = await f.text(); $("#icsText").value = text; STORE.set("icsText", {text, at:Date.now()}); loadCalendar(); });
+wireDrop($("#fitDrop"), $("#fitFile"), importFitbitFiles);
+// drop anywhere on the page too
+document.body.addEventListener("dragover", e=>e.preventDefault());
+document.body.addEventListener("drop", async e => {
+  if (e.target.closest("#drawer")) return; e.preventDefault();
+  const files = [...e.dataTransfer.files]; if (!files.length) return;
+  const ics = files.filter(f=>/\.ics$/i.test(f.name)), fit = files.filter(f=>/\.(csv|json)$/i.test(f.name));
+  if (ics.length){ const text = await ics[0].text(); STORE.set("icsText", {text, at:Date.now()}); loadCalendar(); }
+  if (fit.length){ openSettings(); importFitbitFiles(fit); }
+});
+
+/* ===================== boot ===================== */
+function loadAll(){
+  loadCalendar(); renderFitbit(); loadStuflix(); loadNate(); loadF1(); renderCars();
+}
+$("#refresh").addEventListener("click", loadAll);
+if (location.protocol === "file:" && !navigator.onLine){ /* offline: tiles will show cached/embedded data */ }
+loadAll();
+// auto-refresh live tiles every 30 minutes while open
+setInterval(()=>{ loadCalendar(); loadStuflix(); }, 30*60*1000);
+</script>
+</body>
+</html>
