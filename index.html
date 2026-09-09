@@ -84,7 +84,7 @@
   .panel h3{margin:0 0 4px;font-size:1.05rem}
   .panel h4{margin:16px 0 6px;font-size:.8rem;text-transform:uppercase;letter-spacing:.5px;color:var(--ink-2)}
   .panel label{display:block;font-size:.82rem;color:var(--ink-2);margin:8px 0 3px}
-  .panel input[type=text],.panel input[type=url],.panel textarea{width:100%;background:var(--page);border:1px solid var(--border);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;font-size:.88rem}
+  .panel input[type=text],.panel input[type=url],.panel input[type=password],.panel textarea{width:100%;background:var(--page);border:1px solid var(--border);color:var(--ink);border-radius:8px;padding:8px 10px;font:inherit;font-size:.88rem}
   .panel textarea{min-height:60px;resize:vertical}
   .panel .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px;align-items:center}
   .panel p{font-size:.83rem;color:var(--ink-2);margin:4px 0}
@@ -169,10 +169,19 @@
     <h3>Settings &amp; data</h3>
     <p>Everything is saved in this browser only (nothing is uploaded). Each device you open the dashboard on keeps its own settings.</p>
 
+    <h4>Live data worker (Cloudflare)</h4>
+    <p>Optional. A small private worker pulls Fitbit data from the Google Health API and fetches the Outlook feed server-side, so nothing needs downloading.</p>
+    <label for="workerUrl">Worker URL</label>
+    <input type="url" id="workerUrl" placeholder="https://stux-dash.yourname.workers.dev">
+    <label for="workerKey">Worker key (DASH_KEY)</label>
+    <div style="display:flex;gap:6px"><input type="password" id="workerKey" autocomplete="off" placeholder="the key you set on the worker" style="flex:1"><button class="btn" type="button" id="workerKeyToggle" title="Show / hide">👁</button></div>
+    <div class="row"><button class="btn" id="workerAuth" type="button">Connect Fitbit (Google sign-in)</button><button class="btn" id="workerStatus" type="button">Check status</button><span id="workerMsg" class="small"></span></div>
+
     <h4>Calendar (Outlook)</h4>
     <p>In Outlook on the web: <em>Settings → Calendar → Shared calendars → Publish a calendar</em>, choose your calendar and “Can view all details”, then copy the <b>ICS</b> link and paste it here. If your browser blocks the direct link (common with work tenants), download the .ics file instead and drop it below, or paste its contents.</p>
     <label for="icsUrl">ICS feed URL</label>
     <input type="url" id="icsUrl" placeholder="https://outlook.office365.com/owa/calendar/…/calendar.ics">
+    <p class="small">If a worker is configured, put the ICS link in the worker's ICS_URL setting instead — it will be fetched there.</p>
     <label for="icsText">…or paste the contents of an .ics file</label>
     <textarea id="icsText" placeholder="BEGIN:VCALENDAR …"></textarea>
     <div class="drop" id="icsDrop">Drop an .ics file here, or <input type="file" id="icsFile" accept=".ics,text/calendar"></div>
@@ -227,6 +236,7 @@ const DEFAULTS = {
   nateUrl: "https://stuartmcneil.github.io/films/",
   f1Url: "https://stuartmcneil.github.io/f1/data/data.js",
   icsUrl: "",
+  workerUrl: "", workerKey: "",
   f1Team: "Hamilton, Antonelli, Bortoleto, Hülkenberg, Lindblad, Ferrari, Racing Bulls",
   f1Money: "≈ $108.8M team value · $0.5M in the bank"
 };
@@ -549,7 +559,12 @@ function renderCalendar(evsRaw, source){
 async function loadCalendar(){
   const body = $("#cal-body");
   let text = null, source = "";
-  if (settings.icsUrl){
+  if (workerOn()){
+    try{ const r = await fetch(workerURL("/calendar"), {cache:"no-store"}); if (!r.ok){ const j = await r.json().catch(()=>({})); throw new Error(j.error || "HTTP "+r.status); }
+      text = await r.text(); source = "Live from Outlook via worker"; STORE.set("icsCache", {text, at:Date.now()}); }
+    catch(e){ console.warn("worker calendar", e.message); if (!settings.icsUrl){ const c = STORE.get("icsCache"); if (c){ text = c.text; source = "Worker unreachable — showing copy from " + fmtDay(new Date(c.at)); } } }
+  }
+  if (!text && settings.icsUrl){
     try{ text = await fetchText(settings.icsUrl); source = "Live from Outlook ICS feed"; STORE.set("icsCache", {text, at:Date.now()}); }
     catch(e){
       const c = STORE.get("icsCache");
@@ -649,7 +664,7 @@ function renderFitbit(){
   const fit = STORE.get("fit", {});
   const keys = Object.keys(fit).sort();
   if (!keys.length){
-    body.innerHTML = `<div class="empty">No Fitbit data yet.
+    body.innerHTML = workerOn() ? `<div class="empty">Worker configured — waiting for the first Fitbit pull. If nothing appears, open ⚙︎ → Check status.</div>` : `<div class="empty">No Fitbit data yet.
       <ol><li>Fitbit → Settings → <b>Data export</b> → pick a range, CSV → download.</li><li>Open ⚙︎ settings and drop the file in. Repeat whenever you want to top it up — new days merge in.</li></ol></div>`;
     foot.textContent = ""; return;
   }
@@ -678,7 +693,7 @@ function renderFitbit(){
   $("#fit-steps").appendChild(barChart(last14.map(x=>({label:lab(x), value:x.v.steps||0, title:fmtDay(x.d), hi:x.k===lastK})), {color:"var(--s3)", unit:" steps", target:10000}));
   $("#fit-sleep").appendChild(barChart(last14.map(x=>({label:lab(x), value:+((x.v.sleepMin||0)/60).toFixed(2), title:fmtDay(x.d)})), {color:"var(--s7)", unit:" h", fmt:v=>hm(v*60)}));
   foot.textContent = `${keys.length} days stored · ${keys[0]} → ${lastK}`;
-  $("#fit-upd").textContent = "imported data — drop a new export in ⚙︎ to update";
+  const liveAt = STORE.get("fitLiveAt"); $("#fit-upd").textContent = liveAt ? "live via worker · " + fmtDay(new Date(liveAt)) + " " + fmtTime(new Date(liveAt)) : "imported data — drop a new export in ⚙︎ to update";
 }
 
 /* ===================== settings UI ===================== */
@@ -686,6 +701,7 @@ const drawer = $("#drawer");
 function openSettings(){
   $("#icsUrl").value = settings.icsUrl||""; $("#stuflixUrl").value = settings.stuflixUrl; $("#nateUrl").value = settings.nateUrl; $("#f1Url").value = settings.f1Url;
   $("#f1Team").value = settings.f1Team||""; $("#f1Money").value = settings.f1Money||"";
+  $("#workerUrl").value = settings.workerUrl||""; $("#workerKey").value = settings.workerKey||""; $("#workerMsg").textContent = "";
   const t = STORE.get("icsText"); $("#icsText").value = t ? t.text : ""; $("#fitStatus").textContent = "";
   drawer.classList.add("open");
 }
@@ -693,13 +709,14 @@ $("#openSettings").addEventListener("click", openSettings);
 $("#closeSettings").addEventListener("click", ()=>drawer.classList.remove("open"));
 drawer.addEventListener("click", e => { if (e.target===drawer) drawer.classList.remove("open"); });
 $("#saveSettings").addEventListener("click", ()=>{
-  ["icsUrl","stuflixUrl","nateUrl","f1Url","f1Team","f1Money"].forEach(k => settings[k] = $("#"+k).value.trim() || DEFAULTS[k]);
-  if (!$("#icsUrl").value.trim()) settings.icsUrl = "";
+  ["icsUrl","stuflixUrl","nateUrl","f1Url","f1Team","f1Money","workerUrl","workerKey"].forEach(k => settings[k] = $("#"+k).value.trim() || DEFAULTS[k]);
+  ["icsUrl","workerUrl","workerKey"].forEach(k => { if (!$("#"+k).value.trim()) settings[k] = ""; });
+  settings.workerUrl = settings.workerUrl.replace(/\/+$/,"");
   STORE.set("settings", settings);
   const txt = $("#icsText").value.trim(); if (txt) STORE.set("icsText", {text:txt, at:Date.now()}); else STORE.del("icsText");
   drawer.classList.remove("open"); loadAll();
 });
-$("#clearData").addEventListener("click", ()=>{ if (confirm("Remove stored calendar, Fitbit data and settings from this browser?")){ ["settings","icsText","icsCache","fit"].forEach(STORE.del); location.reload(); } });
+$("#clearData").addEventListener("click", ()=>{ if (confirm("Remove stored calendar, Fitbit data and settings from this browser?")){ ["settings","icsText","icsCache","fit","fitLiveAt"].forEach(STORE.del); location.reload(); } });
 function wireDrop(zone, input, handler){
   zone.addEventListener("dragover", e=>{ e.preventDefault(); zone.classList.add("over"); });
   zone.addEventListener("dragleave", ()=>zone.classList.remove("over"));
@@ -718,15 +735,49 @@ document.body.addEventListener("drop", async e => {
   if (fit.length){ openSettings(); importFitbitFiles(fit); }
 });
 
+/* ===================== live data worker ===================== */
+const workerOn = () => !!(settings.workerUrl && settings.workerKey);
+const workerURL = (path, extra="") => `${settings.workerUrl}${path}?key=${encodeURIComponent(settings.workerKey)}${extra}`;
+async function loadFitbitLive(){
+  if (!workerOn()) return false;
+  const r = await fetch(workerURL("/fitbit"), {cache:"no-store"});
+  const data = await r.json().catch(()=>({}));
+  if (!r.ok && !data.days) throw new Error(data.error || ("HTTP "+r.status));
+  if (data.days && Object.keys(data.days).length){ mergeFit(data.days); STORE.set("fitLiveAt", Date.now()); }
+  if (data.errors) console.warn("worker fitbit errors", data.errors);
+  return true;
+}
+$("#workerKeyToggle").addEventListener("click", ()=>{ const i = $("#workerKey"); i.type = i.type === "password" ? "text" : "password"; });
+$("#workerAuth").addEventListener("click", ()=>{
+  const u = $("#workerUrl").value.trim().replace(/\/+$/,""), k = $("#workerKey").value.trim();
+  if (!u || !k){ $("#workerMsg").textContent = "Enter the worker URL and key first."; return; }
+  settings.workerUrl = u; settings.workerKey = k; STORE.set("settings", settings);
+  window.open(`${u}/auth?key=${encodeURIComponent(k)}`, "_blank");
+  $("#workerMsg").textContent = "Google sign-in opened in a new tab. Come back and tap Check status when done.";
+});
+$("#workerStatus").addEventListener("click", async ()=>{
+  const u = $("#workerUrl").value.trim().replace(/\/+$/,""), k = $("#workerKey").value.trim();
+  if (!u || !k){ $("#workerMsg").textContent = "Enter the worker URL and key first."; return; }
+  try{ const r = await fetch(`${u}/status?key=${encodeURIComponent(k)}`); const s = await r.json();
+    $("#workerMsg").innerHTML = r.ok ? `<span class="${s.authorised?'ok':''}">${s.authorised? "Authorised ✓" : "Not authorised yet"}</span>${s.lastFitbitOk? " · last Fitbit pull "+fmtDay(new Date(s.lastFitbitOk))+" "+fmtTime(new Date(s.lastFitbitOk)) : ""}${s.icsConfigured? " · ICS set on worker":""}${s.lastFitbitError? " · last error: "+esc(s.lastFitbitError).slice(0,160):""}` : `Error: ${esc(s.error||r.status)}`;
+  }catch(e){ $("#workerMsg").textContent = "Couldn't reach the worker: " + e.message; }
+});
+
 /* ===================== boot ===================== */
+async function loadFitbit(){
+  renderFitbit();
+  if (!workerOn()) return;
+  try{ await loadFitbitLive(); renderFitbit(); }
+  catch(e){ const f = $("#fit-upd"); if (f) f.textContent = "live pull failed: " + e.message; }
+}
 function loadAll(){
-  loadCalendar(); renderFitbit(); loadStuflix(); loadNate(); loadF1(); renderCars();
+  loadCalendar(); loadFitbit(); loadStuflix(); loadNate(); loadF1(); renderCars();
 }
 $("#refresh").addEventListener("click", loadAll);
 if (location.protocol === "file:" && !navigator.onLine){ /* offline: tiles will show cached/embedded data */ }
 loadAll();
 // auto-refresh live tiles every 30 minutes while open
-setInterval(()=>{ loadCalendar(); loadStuflix(); }, 30*60*1000);
+setInterval(()=>{ loadCalendar(); loadStuflix(); loadFitbit(); }, 30*60*1000);
 </script>
 </body>
 </html>
